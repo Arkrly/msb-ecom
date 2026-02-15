@@ -1,2 +1,130 @@
 # Ignore archives directory
 archives/
+
+# Maven / Java
+target/
+*.class
+*.log
+.mvn/wrapper/maven-wrapper.jar
+.mvn/wrapper/maven-wrapper.properties
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# STS
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# Node.js / Angular
+node_modules/
+dist/
+.angular/
+package-lock.json
+/tmp
+/out-tsc
+/bazel-out
+npm-debug.log
+yarn-error.log
+/.angular/cache
+.sass-cache/
+/connect.lock
+/coverage
+/libpeerconnection.log
+testem.log
+/typings
+
+# IDEs
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+.idea/
+*.iml
+*.iws
+*.ipr
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+.history/*
+HELP.md
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Generated files
+*.tsbuildinfo
+*.generated.*
+*.min.js
+*.min.css
+*.map
+*.sqlite
+*.db
+
+# Coverage and reports
+coverage/
+*.lcov
+.coverage
+.nyc_output
+junit.xml
+
+# Runtime files
+*.pid
+*.pid.lock
+*.seed
+
+# Framework specific
+.next/
+.nuxt/
+.quasar/
+.venv/
+env/
+venv/
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# Logs (additional)
+logs/
+*.out
+
+# Dependency directories (additional)
+.pnp/
+.pnp.js
+
+# Build artifacts (additional)
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# Database
+*.h2.db
+*.mv.db
+
+# GitHub Actions cache
+.github/java-upgrade/*/logs/
