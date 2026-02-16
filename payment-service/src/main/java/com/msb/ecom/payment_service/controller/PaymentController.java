@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+import jakarta.validation.Valid;
+
 @RestController
 @RequestMapping("/api/payment")
 @RequiredArgsConstructor
@@ -18,7 +20,7 @@ public class PaymentController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public PaymentResponse processPayment(@RequestBody PaymentRequest paymentRequest) {
+    public PaymentResponse processPayment(@RequestBody @Valid PaymentRequest paymentRequest) {
         return paymentService.processPayment(paymentRequest);
     }
 

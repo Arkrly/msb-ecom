@@ -3,4 +3,171 @@
 @tailwind components;
 @tailwind utilities;
 
-/* You can add global styles below */
+/* ─── Design Tokens ──────────────────────────────────────────────── */
+:root {
+  --color-bg-primary: #0c0c0e;
+  --color-bg-secondary: #141417;
+  --color-bg-tertiary: #1c1c21;
+  --color-bg-elevated: #24242b;
+  --color-bg-hover: #2a2a32;
+
+  --color-text-primary: #f0f0f2;
+  --color-text-secondary: #a0a0ac;
+  --color-text-muted: #6e6e7a;
+
+  --color-border: #2a2a32;
+  --color-border-hover: #3a3a44;
+
+  --color-accent: #f98e07;
+  --color-accent-hover: #ffae20;
+  --color-accent-muted: rgba(249, 142, 7, 0.12);
+
+  --color-success: #45a44a;
+  --color-danger: #f43f5e;
+  --color-warning: #ffae20;
+  --color-info: #38bdf8;
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+
+  --font-display: "Outfit", sans-serif;
+  --font-body: "DM Sans", sans-serif;
+
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ─── Base Reset ─────────────────────────────────────────────────── */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html {
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    color: var(--color-text-primary);
+  }
+
+  h1 {
+    font-size: 2.25rem;
+  }
+  h2 {
+    font-size: 1.75rem;
+  }
+  h3 {
+    font-size: 1.375rem;
+  }
+  h4 {
+    font-size: 1.125rem;
+  }
+
+  a {
+    color: var(--color-accent);
+    text-decoration: none;
+    transition: color var(--transition-fast);
+  }
+  a:hover {
+    color: var(--color-accent-hover);
+  }
+
+  ::selection {
+    background-color: var(--color-accent-muted);
+    color: var(--color-accent);
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--color-bg-secondary);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-border-hover);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-text-muted);
+  }
+}
+
+/* ─── Utility Classes ────────────────────────────────────────────── */
+@layer components {
+  /* Subtle noise texture overlay */
+  .bg-noise {
+    position: relative;
+  }
+  .bg-noise::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    opacity: 0.03;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Glass card effect */
+  .glass {
+    background: rgba(28, 28, 33, 0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--color-border);
+  }
+
+  /* Accent glow on hover */
+  .hover-glow {
+    transition: box-shadow var(--transition-base);
+  }
+  .hover-glow:hover {
+    box-shadow: 0 0 20px -5px rgba(249, 142, 7, 0.25);
+  }
+}
+
+/* ─── Reduced Motion ─────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

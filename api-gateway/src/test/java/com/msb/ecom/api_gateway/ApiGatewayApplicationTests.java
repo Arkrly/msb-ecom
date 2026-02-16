@@ -3,13 +3,14 @@ package com.msb.ecom.api_gateway;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 
+import org.mockito.Mockito;
+import org.mockito.ArgumentMatchers;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.reactive.server.WebTestClient;
 import io.restassured.RestAssured;
 
 import java.time.Instant;
@@ -18,32 +19,29 @@ import java.util.Map;
 import static org.hamcrest.Matchers.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
-		"spring.security.oauth2.resourceserver.jwt.issuer-uri="
+		"spring.security.oauth2.resourceserver.jwt.secret=5367566B59703373367639792F423F4528482B4D6251655468576D5A71347437"
 })
-@Import(ApiGatewayApplicationTests.MockJwtDecoderConfig.class)
 class ApiGatewayApplicationTests {
 
 	@LocalServerPort
 	private Integer port;
 
+	@MockitoBean
+	private JwtDecoder jwtDecoder;
+
 	@BeforeEach
 	void setup() {
 		RestAssured.baseURI = "http://localhost";
 		RestAssured.port = port;
-	}
 
-	@TestConfiguration
-	static class MockJwtDecoderConfig {
-		@Bean
-		public JwtDecoder jwtDecoder() {
-			// Return a no-op decoder — we test with permitAll paths or unauthenticated
-			return token -> Jwt.withTokenValue(token)
-					.header("alg", "none")
-					.claim("sub", "test-user")
-					.issuedAt(Instant.now())
-					.expiresAt(Instant.now().plusSeconds(3600))
-					.build();
-		}
+		// Mock JwtDecoder to return a valid JWT for any token
+		Mockito.when(jwtDecoder.decode(ArgumentMatchers.anyString()))
+				.thenReturn(Jwt.withTokenValue("token")
+						.header("alg", "none")
+						.claim("sub", "test-user")
+						.issuedAt(Instant.now())
+						.expiresAt(Instant.now().plusSeconds(3600))
+						.build());
 	}
 
 	@Test

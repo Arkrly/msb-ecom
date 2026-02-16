@@ -12,6 +12,9 @@ import org.springframework.stereotype.Service;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 
+import jakarta.validation.Valid;
+import org.springframework.messaging.handler.annotation.Payload;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -20,7 +23,7 @@ public class NotificationService {
     private final JavaMailSender javaMailSender;
 
     @KafkaListener(topics = "order-placed")
-    public void listen(OrderPlacedEvent orderPlacedEvent) {
+    public void listen(@Payload @Valid OrderPlacedEvent orderPlacedEvent) {
         log.info("Received message from order-placed topic: {}", orderPlacedEvent);
         try {
             sendEmail(orderPlacedEvent);

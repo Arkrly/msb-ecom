@@ -6,7 +6,7 @@ services:
     image: mongo:7.0.5
     container_name: mongo
     ports:
-      - "${MONGO_PORT:-27017}:27017"
+      - "127.0.0.1:${MONGO_PORT:-27017}:27017"
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_DB_USERNAME:-root}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_DB_PASSWORD:-password}
@@ -19,7 +19,7 @@ services:
     image: mysql:8.3.0
     container_name: mysql
     ports:
-      - "${MYSQL_PORT:-3306}:3306"
+      - "127.0.0.1:${MYSQL_PORT:-3306}:3306"
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-mysql}
     volumes:
@@ -51,9 +51,22 @@ services:
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
     ports:
-      - "${KEYCLOAK_PORT:-8181}:8080"
+      - "127.0.0.1:${KEYCLOAK_PORT:-8181}:8080"
     depends_on:
       - postgres-keycloak
+
+  # Auth Service Database
+  postgres-auth:
+    image: postgres:15
+    container_name: postgres-auth
+    environment:
+      POSTGRES_DB: ${AUTH_DB_NAME:-auth_service}
+      POSTGRES_USER: ${AUTH_DB_USER:-auth}
+      POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD:-password}
+    volumes:
+      - postgres_auth_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
 
   # Kafka Ecosystem
   zookeeper:
@@ -61,7 +74,7 @@ services:
     hostname: zookeeper
     container_name: zookeeper
     ports:
-      - "2181:2181"
+      - "127.0.0.1:2181:2181"
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
@@ -70,7 +83,7 @@ services:
     image: confluentinc/cp-kafka:7.5.0
     container_name: broker
     ports:
-      - "${KAFKA_PORT:-9092}:9092"
+      - "127.0.0.1:${KAFKA_PORT:-9092}:9092"
     depends_on:
       - zookeeper
     environment:
@@ -121,3 +134,4 @@ volumes:
   mongo_data:
   mysql_data:
   postgres_keycloak_data:
+  postgres_auth_data:

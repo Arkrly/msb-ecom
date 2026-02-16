@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+import jakarta.validation.Valid;
+
 @RestController
 @RequestMapping("/api/order")
 @RequiredArgsConstructor
@@ -18,7 +20,7 @@ public class OrderController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public OrderResponse placeOrder(@RequestBody OrderRequest orderRequest) {
+    public OrderResponse placeOrder(@RequestBody @Valid OrderRequest orderRequest) {
         return orderService.placeOrder(orderRequest);
     }
 

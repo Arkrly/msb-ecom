@@ -27,6 +27,9 @@ public class Routes {
         @Value("${service.payment.url}")
         private String paymentServiceUrl;
 
+        @Value("${service.auth.url}")
+        private String authServiceUrl;
+
         @Bean
         public RouterFunction<ServerResponse> productServiceRoute() {
                 return route("product_service")
@@ -59,6 +62,15 @@ public class Routes {
                 return route("payment_service")
                                 .route(RequestPredicates.path("/api/payment/**"), http(paymentServiceUrl))
                                 .filter(circuitBreaker("paymentServiceCircuitBreaker",
+                                                URI.create("forward:/fallbackRoute")))
+                                .build();
+        }
+
+        @Bean
+        public RouterFunction<ServerResponse> authServiceRoute() {
+                return route("auth_service")
+                                .route(RequestPredicates.path("/auth/**"), http(authServiceUrl))
+                                .filter(circuitBreaker("authServiceCircuitBreaker",
                                                 URI.create("forward:/fallbackRoute")))
                                 .build();
         }

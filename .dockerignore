@@ -1,0 +1,28 @@
+# ── Build artifacts ───────────────────────────────────────────
+**/target/
+**/dist/
+**/node_modules/
+**/.angular/
+
+# ── IDE / Editor ─────────────────────────────────────────────
+**/.idea/
+**/.vscode/
+**/*.iml
+
+# ── Git ──────────────────────────────────────────────────────
+.git/
+.gitignore
+
+# ── Docs / Non-essential ─────────────────────────────────────
+docs/
+Project-Context/
+*.md
+LICENSE
+
+# ── Env files (we pass env vars via docker-compose) ──────────
+.env
+.env.*
+
+# ── OS artifacts ─────────────────────────────────────────────
+.DS_Store
+Thumbs.db

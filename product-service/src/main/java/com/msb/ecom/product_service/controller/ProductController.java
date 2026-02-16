@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+import jakarta.validation.Valid;
+
 @RestController
 @RequestMapping("/api/product")
 @RequiredArgsConstructor
@@ -18,7 +20,7 @@ public class ProductController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public ProductResponse createProduct(@RequestBody ProductRequest productRequest) {
+    public ProductResponse createProduct(@RequestBody @Valid ProductRequest productRequest) {
         return productService.createProduct(productRequest);
     }
 
