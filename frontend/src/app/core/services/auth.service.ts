@@ -1,6 +1,7 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, computed, Inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { Observable, tap, catchError, of } from 'rxjs';
+import { Observable, tap } from 'rxjs';
 import { UserResponse, LoginRequest, SignupRequest } from '../models/auth.model';
 import { environment } from '../../../environments/environment.development';
 
@@ -14,12 +15,15 @@ export class AuthService {
   readonly loading = this.isLoading.asReadonly();
   readonly isAuthenticated = computed(() => this.currentUser() !== null);
 
-  constructor(private http: HttpClient) {
+  constructor(
+    private http: HttpClient,
+    @Inject(PLATFORM_ID) private platformId: Object
+  ) {
     this.loadUserFromStorage();
   }
 
   private loadUserFromStorage(): void {
-    if (typeof localStorage !== 'undefined') {
+    if (isPlatformBrowser(this.platformId)) {
       const token = localStorage.getItem('token');
       const userStr = localStorage.getItem('user');
       if (token && userStr) {
@@ -29,7 +33,7 @@ export class AuthService {
   }
 
   getToken(): string | null {
-    if (typeof localStorage !== 'undefined') {
+    if (isPlatformBrowser(this.platformId)) {
       return localStorage.getItem('token');
     }
     return null;
@@ -53,7 +57,7 @@ export class AuthService {
 
   private handleAuthSuccess(user: UserResponse): void {
     this.currentUser.set(user);
-    if (typeof localStorage !== 'undefined') {
+    if (isPlatformBrowser(this.platformId)) {
       localStorage.setItem('token', user.token);
       localStorage.setItem('user', JSON.stringify(user));
     }
@@ -61,7 +65,7 @@ export class AuthService {
 
   clearUser(): void {
     this.currentUser.set(null);
-    if (typeof localStorage !== 'undefined') {
+    if (isPlatformBrowser(this.platformId)) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
     }

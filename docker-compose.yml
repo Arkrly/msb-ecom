@@ -102,7 +102,7 @@ services:
     depends_on:
       - broker
     ports:
-      - "${SCHEMA_REGISTRY_PORT:-8081}:8081"
+      - "${SCHEMA_REGISTRY_PORT:-9081}:8081"
     environment:
       SCHEMA_REGISTRY_HOST_NAME: schema-registry
       SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: "broker:29092"
@@ -112,7 +112,7 @@ services:
     image: provectuslabs/kafka-ui:latest
     container_name: kafka-ui
     ports:
-      - "${KAFKA_UI_PORT:-8080}:8080"
+      - "${KAFKA_UI_PORT:-9080}:8080"
     depends_on:
       - broker
       - schema-registry
