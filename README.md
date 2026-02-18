@@ -1,87 +1,125 @@
-# msb-ecom
+# MSB E-Commerce Microservices
 
-A simple e-commerce monorepo with Spring Boot microservices and an Angular frontend.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4.2-green.svg)](https://spring.io/projects/spring-boot)
+[![Angular](https://img.shields.io/badge/Angular-20-red.svg)](https://angular.io/)
+[![Docker](https://img.shields.io/badge/Docker-Enabled-blue.svg)](https://www.docker.com/)
 
-## Overview
+A comprehensive, production-grade e-commerce microservices application built with Java Spring Boot and Angular. This project represents a year of dedicated design and development, solving complex distributed system challenges to provide a robust, scalable backend and a modern, responsive frontend.
 
-- Backend (Java 21, Spring Boot 3):
-	- `api-gateway` – routes external traffic to services
-	- `product-service` – product catalog
-	- `inventory-service` – stock levels and migrations (Flyway)
-	- `order-service` – orders (skeleton)
-	- `notification-service` – notifications (skeleton)
-- Frontend (Angular 20): `frontend`
+## 🚀 Overview
 
-## Quick start
+MSB E-Commerce is designed to demonstrate a real-world microservices architecture. It includes services for product management, order processing, inventory control, payment handling, and notifications, all orchestrated behind an API Gateway and secured with OAuth2/OpenID Connect.
 
-Prereqs: Java 21 (JDK), Node.js 20+. Maven Wrapper is included; no global Maven required.
+### Key Features
 
-### Setup (Unix/Linux/macOS)
+- **Microservices Architecture**: Decoupled services for independent scaling and development.
+- **API Gateway**: Centralized entry point with routing, rate limiting, and circuit breaking.
+- **Security**: OAuth2 Resource Server implementation using **Keycloak** for identity management.
+- **Event-Driven**: Asynchronous communication using **Apache Kafka** for order placement and notifications.
+- **Resilience**: Implementation of Circuit Breaker pattern using **Resilience4j**.
+- **Observability**: Distributed tracing and centralized logging (ready for integration).
+- **Responsive Frontend**: Modern UI built with **Angular 20** and **TailwindCSS**.
 
-Ensure Maven wrappers are executable:
+## 🛠️ Tech Stack
 
-```bash
-chmod +x */mvnw
-```
+### Backend
 
-### Run services
+- **Language**: Java 21
+- **Framework**: Spring Boot 3.4.2, Spring Cloud 2024.0.0
+- **Database**:
+  - PostgreSQL (Auth, Keycloak)
+  - MongoDB (Product Service)
+  - MySQL (Order, Inventory, Payment)
+- **Messaging**: Apache Kafka
+- **Security**: Spring Security, OAuth2, Keycloak
+- **Build Tool**: Maven
 
-Open separate terminals for each service you need:
+### Frontend
 
-**Windows (PowerShell):**
+- **Framework**: Angular 20
+- **Styling**: TailwindCSS
+- **State Management**: Signals (Angular Core)
 
-```powershell
-# API Gateway
-cd api-gateway; .\mvnw.cmd spring-boot:run
+### Infrastructure
 
-# Product Service
-cd product-service; .\mvnw.cmd spring-boot:run
+- **Containerization**: Docker & Docker Compose
+- **Service Discovery**: (Planned/Static)
+- **API Gateway**: Spring Cloud Gateway MVC
 
-# Inventory Service
-cd inventory-service; .\mvnw.cmd spring-boot:run
+## 🏗️ Architecture
 
-# Order Service (if/when implemented)
-cd order-service; .\mvnw.cmd spring-boot:run
+The system consists of the following microservices:
 
-# Notification Service (if/when implemented)
-cd notification-service; .\mvnw.cmd spring-boot:run
-```
+| Service | Port | Description | DB |
+| partly | --- | --- | --- |
+| **API Gateway** | `9000` | Entry point, routing, auth & resilience | - |
+| **Auth Service** | `8085` | User authentication & registration | PostgreSQL |
+| **Product Service** | `8080` | Product catalog management | MongoDB |
+| **Order Service** | `8081` | Order lifecycle management | MySQL |
+| **Inventory Service** | `8082` | Stock tracking and reservation | MySQL |
+| **Payment Service** | `8084` | Payment processing | MySQL |
+| **Notification Service** | `8083` | Email/SMS notifications via Kafka | - |
+| **Frontend** | `4200` | User Interface | - |
 
-**Unix/Linux/macOS:**
+## 🚦 Getting Started
 
-```bash
-# API Gateway
-cd api-gateway && ./mvnw spring-boot:run
+### Prerequisites
 
-# Product Service
-cd product-service && ./mvnw spring-boot:run
+- Java 21+
+- Node.js 20+ & npm
+- Docker & Docker Compose
+- Maven
 
-# Inventory Service
-cd inventory-service && ./mvnw spring-boot:run
+### Installation
 
-# Order Service (if/when implemented)
-cd order-service && ./mvnw spring-boot:run
+1. **Clone the repository**
 
-# Notification Service (if/when implemented)
-cd notification-service && ./mvnw spring-boot:run
-```
+   ```bash
+   git clone https://github.com/Arkrly/msb-ecom.git
+   cd msb-ecom
+   ```
 
-### Run the frontend
+2. **Start Infrastructure (Databases, Broker, Keycloak)**
 
-```bash
-cd frontend
-npm install
-npm start
-```
+   ```bash
+   ./run.sh local
+   ```
 
-## VS Code Extensions
+   _The `run.sh` script automates the startup of Docker containers and local Java processes._
 
-This repository includes a recommended list of extensions for VS Code.
-When you open this folder in VS Code, you should see a prompt to install the recommended extensions.
-If not, you can view them in `.vscode/extensions.json` or by searching for `@recommended` in the Extensions view.
+   Alternatively, use Docker Compose directly:
 
-## Notes
+   ```bash
+   docker-compose up -d
+   ```
 
-- Git ignores the `archives/` directory by default.
-- Ports, routes, and service URLs can be configured via each module's `application.properties`.
+3. **Run Backend Services**
+   If not using `run.sh`, you can run each service individually:
 
+   ```bash
+   cd product-service && mvn spring-boot:run
+   cd order-service && mvn spring-boot:run
+   # ... repeat for other services
+   ```
+
+4. **Run Frontend**
+   ```bash
+   cd frontend
+   npm install
+   npm start
+   ```
+   Access the app at `http://localhost:4200`.
+
+## 🤝 Contributing
+
+Contributions are welcome! This project is open source to help others learn and build better software. Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct, and the process for submitting pull requests.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## ❤️ Acknowledgments
+
+- Built with passion and coffee over 12 months.
+- Open sourced for the community.

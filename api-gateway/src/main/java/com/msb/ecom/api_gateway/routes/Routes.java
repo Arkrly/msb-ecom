@@ -33,7 +33,7 @@ public class Routes {
         @Bean
         public RouterFunction<ServerResponse> productServiceRoute() {
                 return route("product_service")
-                                .route(RequestPredicates.path("/api/product"), http(productServiceUrl))
+                                .route(RequestPredicates.path("/api/product/**"), http(productServiceUrl))
                                 .filter(circuitBreaker("productServiceCircuitBreaker",
                                                 URI.create("forward:/fallbackRoute")))
                                 .build();
@@ -42,7 +42,7 @@ public class Routes {
         @Bean
         public RouterFunction<ServerResponse> orderServiceRoute() {
                 return route("order_service")
-                                .route(RequestPredicates.path("/api/order"), http(orderServiceUrl))
+                                .route(RequestPredicates.path("/api/order/**"), http(orderServiceUrl))
                                 .filter(circuitBreaker("orderServiceCircuitBreaker",
                                                 URI.create("forward:/fallbackRoute")))
                                 .build();
@@ -51,7 +51,7 @@ public class Routes {
         @Bean
         public RouterFunction<ServerResponse> inventoryServiceRoute() {
                 return route("inventory_service")
-                                .route(RequestPredicates.path("/api/inventory"), http(inventoryServiceUrl))
+                                .route(RequestPredicates.path("/api/inventory/**"), http(inventoryServiceUrl))
                                 .filter(circuitBreaker("inventoryServiceCircuitBreaker",
                                                 URI.create("forward:/fallbackRoute")))
                                 .build();

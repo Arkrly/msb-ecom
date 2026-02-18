@@ -1,0 +1,8 @@
+product-service:47667
+order-service:47672
+inventory-service:47685
+notification-service:47699
+payment-service:47715
+auth-service:47745
+api-gateway:47787
+frontend:47788
