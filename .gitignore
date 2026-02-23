@@ -126,5 +126,23 @@ logs/
 *.h2.db
 *.mv.db
 
+# Run state
+.run_pids
+
+# Temp test/debug output
+docker_status.txt
+db_status.txt
+git_status.txt
+jars.txt
+mvn_tail.txt
+pids.txt
+port_check.txt
+port_check2.txt
+maven_build.log
+
 # GitHub Actions cache
 .github/java-upgrade/*/logs/
+
+# Python cache
+__pycache__/
+*.pyc
