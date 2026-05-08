@@ -52,15 +52,15 @@ MSB E-Commerce is designed to demonstrate a real-world microservices architectur
 The system consists of the following microservices:
 
 | Service | Port | Description | DB |
-| partly | --- | --- | --- |
-| **API Gateway** | `9000` | Entry point, routing, auth & resilience | - |
-| **Auth Service** | `8085` | User authentication & registration | PostgreSQL |
-| **Product Service** | `8080` | Product catalog management | MongoDB |
-| **Order Service** | `8081` | Order lifecycle management | MySQL |
-| **Inventory Service** | `8082` | Stock tracking and reservation | MySQL |
-| **Payment Service** | `8084` | Payment processing | MySQL |
-| **Notification Service** | `8083` | Email/SMS notifications via Kafka | - |
-| **Frontend** | `4200` | User Interface | - |
+|---|---:|---|---|
+| API Gateway | 9000 | Entry point, routing, auth & resilience | - |
+| Auth Service | 8085 | User authentication & registration | PostgreSQL |
+| Product Service | 8080 | Product catalog management | MongoDB |
+| Order Service | 8081 | Order lifecycle management | MySQL |
+| Inventory Service | 8082 | Stock tracking and reservation | MySQL |
+| Payment Service | 8084 | Payment processing | MySQL |
+| Notification Service | 8083 | Email/SMS notifications via Kafka | - |
+| Frontend | 4200 | User Interface | - |
 
 ## 🚦 Getting Started
 
