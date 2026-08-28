@@ -1,0 +1,25 @@
+# Kind cluster configuration for msb-ecom local development
+# Single-node cluster targeting i5-1135G7 / 15GB RAM constraints
+# extraPortMappings allow host-direct access without an ingress controller
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      # API Gateway NodePort → host 9000
+      - containerPort: 30000
+        hostPort: 9000
+        protocol: TCP
+      # Angular Frontend (HTTP) NodePort → host 80
+      - containerPort: 30080
+        hostPort: 80
+        protocol: TCP
+      # Angular Frontend (dev port) NodePort → host 4200
+      - containerPort: 30420
+        hostPort: 4200
+        protocol: TCP
+      # Auth / Keycloak NodePort → host 8085
+      - containerPort: 30850
+        hostPort: 8085
+        protocol: TCP
