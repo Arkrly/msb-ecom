@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: msb-ecom
+  labels:
+    name: msb-ecom
+    app.kubernetes.io/part-of: msb-ecom

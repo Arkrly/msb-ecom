@@ -1,0 +1,332 @@
+# ─────────────────────────────────────────────────────────────
+#  Stateful Databases: MongoDB, MySQL, Postgres (Auth & Keycloak)
+# ─────────────────────────────────────────────────────────────
+
+# ── MongoDB (Product Service) ─────────────────────────────────
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mongo-pvc
+  namespace: msb-ecom
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongo
+  namespace: msb-ecom
+  labels:
+    app: mongo
+    app.kubernetes.io/tier: database
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongo
+  template:
+    metadata:
+      labels:
+        app: mongo
+        app.kubernetes.io/tier: database
+    spec:
+      containers:
+        - name: mongo
+          image: mongo:7.0.5
+          ports:
+            - containerPort: 27017
+          env:
+            - name: MONGO_INITDB_ROOT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: MONGO_INITDB_ROOT_USERNAME
+            - name: MONGO_INITDB_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: MONGO_INITDB_ROOT_PASSWORD
+            - name: MONGO_INITDB_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: MONGO_DB_NAME
+          volumeMounts:
+            - name: mongo-storage
+              mountPath: /data/db
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+      volumes:
+        - name: mongo-storage
+          persistentVolumeClaim:
+            claimName: mongo-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo
+  namespace: msb-ecom
+spec:
+  selector:
+    app: mongo
+  ports:
+    - port: 27017
+      targetPort: 27017
+
+---
+# ── MySQL (Order, Inventory, Payment Services) ───────────────
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-init-script
+  namespace: msb-ecom
+data:
+  init.sql: |
+    CREATE DATABASE IF NOT EXISTS order_service;
+    CREATE DATABASE IF NOT EXISTS inventory_service;
+    CREATE DATABASE IF NOT EXISTS payment_service;
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pvc
+  namespace: msb-ecom
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+  namespace: msb-ecom
+  labels:
+    app: mysql
+    app.kubernetes.io/tier: database
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+        app.kubernetes.io/tier: database
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.3.0
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: MYSQL_ROOT_PASSWORD
+          volumeMounts:
+            - name: mysql-storage
+              mountPath: /var/lib/mysql
+            - name: init-script
+              mountPath: /docker-entrypoint-initdb.d
+          resources:
+            requests:
+              memory: "384Mi"
+              cpu: "100m"
+            limits:
+              memory: "768Mi"
+              cpu: "500m"
+      volumes:
+        - name: mysql-storage
+          persistentVolumeClaim:
+            claimName: mysql-pvc
+        - name: init-script
+          configMap:
+            name: mysql-init-script
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+  namespace: msb-ecom
+spec:
+  selector:
+    app: mysql
+  ports:
+    - port: 3306
+      targetPort: 3306
+
+---
+# ── PostgreSQL for Auth Service ──────────────────────────────
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-auth-pvc
+  namespace: msb-ecom
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-auth
+  namespace: msb-ecom
+  labels:
+    app: postgres-auth
+    app.kubernetes.io/tier: database
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-auth
+  template:
+    metadata:
+      labels:
+        app: postgres-auth
+        app.kubernetes.io/tier: database
+    spec:
+      containers:
+        - name: postgres-auth
+          image: postgres:15
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: AUTH_DB_NAME
+            - name: POSTGRES_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: AUTH_DB_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: AUTH_DB_PASSWORD
+          volumeMounts:
+            - name: postgres-auth-storage
+              mountPath: /var/lib/postgresql/data
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "50m"
+            limits:
+              memory: "256Mi"
+              cpu: "300m"
+      volumes:
+        - name: postgres-auth-storage
+          persistentVolumeClaim:
+            claimName: postgres-auth-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-auth
+  namespace: msb-ecom
+spec:
+  selector:
+    app: postgres-auth
+  ports:
+    - port: 5432
+      targetPort: 5432
+
+---
+# ── PostgreSQL for Keycloak ──────────────────────────────────
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-keycloak-pvc
+  namespace: msb-ecom
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-keycloak
+  namespace: msb-ecom
+  labels:
+    app: postgres-keycloak
+    app.kubernetes.io/tier: database
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-keycloak
+  template:
+    metadata:
+      labels:
+        app: postgres-keycloak
+        app.kubernetes.io/tier: database
+    spec:
+      containers:
+        - name: postgres-keycloak
+          image: postgres:15
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: KEYCLOAK_DB_NAME
+            - name: POSTGRES_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: KEYCLOAK_DB_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: KEYCLOAK_DB_PASSWORD
+          volumeMounts:
+            - name: postgres-keycloak-storage
+              mountPath: /var/lib/postgresql/data
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "50m"
+            limits:
+              memory: "256Mi"
+              cpu: "300m"
+      volumes:
+        - name: postgres-keycloak-storage
+          persistentVolumeClaim:
+            claimName: postgres-keycloak-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-keycloak
+  namespace: msb-ecom
+spec:
+  selector:
+    app: postgres-keycloak
+  ports:
+    - port: 5432
+      targetPort: 5432
