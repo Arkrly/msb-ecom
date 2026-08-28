@@ -1,8 +1,6 @@
 FROM eclipse-temurin:21-jre-alpine
-
 WORKDIR /app
 
-# Create a non-root user
 RUN addgroup -S spring && adduser -S spring -G spring
 USER spring:spring
 
