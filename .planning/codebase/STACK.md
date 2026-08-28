@@ -1,111 +1,114 @@
-# Technology Stack Analysis
+---
+last_mapped_commit: HEAD
+---
 
-## **Analysis Date:** 2026-08-28
+# Technology Stack
 
-## Overview
-A comprehensive, production-grade e-commerce microservices application built with Java Spring Boot and Angular. This project represents a year of dedicated design and development, solving complex distributed system challenges to provide a robust, scalable backend and a modern, responsive frontend.
+**Analysis Date:** 2026-08-28
 
-## Backend Architecture
+## Backend
 
-### Programming Languages
+### Language & Runtime
+- **Java 21** (LTS) — required by all backend services
+- **Maven** multi-module build with parent POM at root `pom.xml`
+- **Maven Wrapper** (`mvnw`) bundled in each service module
 
-- **Primary Language:** Java 21
-  - Used across all microservices for consistency and performance
-  - Modern Java features enable efficient micro-service development
+### Framework
+- **Spring Boot 3.4.2** — core framework for all services
+- **Spring Cloud 2024.0.0** — cloud-native extensions (gateway, circuit breaker)
+- **Spring Cloud Gateway MVC** — API gateway (not the older reactive gateway)
 
-### Frameworks & Libraries
+### Key Libraries
+| Library | Version | Purpose |
+|---------|---------|---------|
+| Spring Data MongoDB | (via Boot starter) | Product Service data access |
+| Spring Data JPA + Hibernate | (via Boot starter) | Order, Inventory, Payment, Auth data access |
+| Spring Security | (via Boot starter) | Auth service security |
+| Spring Kafka | (via Boot starter) | Notification Service Kafka consumer |
+| Spring Mail | (via Boot starter) | Notification Service email sending |
+| Spring Validation | (via Boot starter) | Bean validation (`@Valid`, `@NotBlank`, etc.) |
+| Lombok | 1.18.42 | Boilerplate reduction (`@Data`, `@Builder`, `@RequiredArgsConstructor`) |
+| JJWT | 0.11.5 | JWT token generation/validation (auth-service) |
+| Flyway | (via Boot starter) | Database schema migrations |
+| Resilience4j | (via Spring Cloud) | Circuit breaker, retry, timeout |
+| Logstash Logback Encoder | 7.4 | Structured JSON logging |
+| Nimbus JOSE+JWT | (via Boot starter) | JWT decoding in API Gateway |
 
-- **Spring Boot 3.4.2** - Core framework for all services
-- **Spring Cloud 2024.0.0** - Microservices orchestration
-- **Spring MVC** - REST API development
-- **Spring Data JPA/Mongo** - Database abstraction
-- **Resilience4j** - Resilience patterns implementation
-- **Apache Kafka** - Event streaming and communication
+### Build & Packaging
+- **Spring Boot Maven Plugin** — executable JARs for each service (parent POM skips this)
+- **Multi-stage Docker builds** — `eclipse-temurin:21-jdk` (build) → `eclipse-temurin:21-jre-alpine` (runtime)
+- All Dockerfiles follow identical pattern: dependency caching → package → runtime image with non-root user
 
-### Dependencies
+## Frontend
 
-**Core Dependencies:**
-- `spring-boot-starter-web` - HTTP/REST endpoints
-- `spring-boot-starter-data-mongodb` - MongoDB integration for product/inventory services
-- `spring-cloud-starter-gateway-mvc` - API Gateway functionality
-- `lombok` - Reduces boilerplate code
-- `resilience4j-circuitbreaker` - Circuit breaker pattern
-- `apache-kafka` - Event-driven architecture
-- `spring-security-oauth2` - Security implementation
+### Framework & Language
+- **Angular 20.1.x** — SPA framework with SSR support
+- **TypeScript 5.8.2**
+- **Angular SSR** (`@angular/ssr` + Express 5.1) — server-side rendering capability
 
-**Testing Dependencies:**
-- `spring-boot-starter-test` - JUnit 5 support
-- `spring-boot-testcontainers` - Testcontainers integration
-- `org.testcontainers` - Container-based testing
-- `junit-jupiter` - Test framework
-- `rest-assured` - API testing
+### Styling
+- **TailwindCSS 3.4.17** — utility-first CSS
+- **PostCSS 8.5.6** + **Autoprefixer** — CSS processing
 
-## Frontend Architecture
+### State Management
+- Angular Signals (native) — no external state library
 
-### Technologies
+### Testing
+- **Jasmine 5.8** + **Karma 6.4** — unit testing
+- **Karma Chrome Launcher** — headless browser testing
 
-- **Angular 20** - Modern frontend framework
-- **TypeScript** - Typed JavaScript
-- **TailwindCSS** - Utility-first CSS framework
-- **Angular CLI** - Build tool and scaffolding
+### Build
+- **Angular CLI 20.1.3** (`@angular/build` builder)
+- **Prettier** configured for Angular HTML files
 
-### Build Tools
+## Infrastructure & Data Stores
 
-- **Package.json** - Dependency management
-- **Angular.json** - Angular CLI configuration
-- **Vite** - Optional development server
+### Databases
+| Database | Version | Services | Purpose |
+|----------|---------|----------|---------|
+| MongoDB | 7.0.5 | Product Service | Product catalog (document store) |
+| MySQL | 8.3.0 | Order, Inventory, Payment Services | Relational data |
+| PostgreSQL | 15 | Auth Service, Keycloak | User auth, identity persistence |
 
-## Infrastructure & DevOps
+### Messaging
+| Component | Version | Purpose |
+|-----------|---------|---------|
+| Apache Kafka | Confluent 7.5.0 | Event-driven async communication |
+| Zookeeper | Confluent 7.5.0 | Kafka coordination |
+| Schema Registry | Confluent 7.5.0 | Schema management (configured, not actively used) |
 
-### Containerization
+### Identity & Auth
+| Component | Version | Purpose |
+|-----------|---------|---------|
+| Keycloak | 24.0.1 | OAuth2/OIDC identity provider (configured, not fully integrated) |
+| Self-managed JWT | — | Auth service issues HS256 JWTs via JJWT |
 
-- **Docker** - Containerization for all services
-- **Dockerfile** present in each service
-- **docker-compose.yml** - Local development setup
-- **docker-compose.prod.yml** - Production configuration
+### Observability
+| Component | Version | Purpose |
+|-----------|---------|---------|
+| Elasticsearch | 8.15.0 | Log storage |
+| Logstash | 8.15.0 | Log processing pipeline |
+| Kibana | 8.15.0 | Log visualization |
+| Kafka UI | latest | Kafka topic inspection |
 
-### Build Systems
+### Email
+| Component | Version | Purpose |
+|-----------|---------|---------|
+| Mailpit | latest | Local SMTP server for dev/testing |
 
-- **Maven** - Dependency management and builds
-- **pom.xml** - Central and module-specific configurations
-- **mvnw** - Maven wrapper for consistent builds
+## Containerization
+- **Docker** + **Docker Compose 3.8**
+- Two compose files: `docker-compose.yml` (infrastructure) + `docker-compose.prod.yml` (application services)
+- Named volumes for data persistence
+- All ports bound to `127.0.0.1` (localhost-only) in compose
 
-### CI/CD
+## Development Tools
+- `run.sh` — single script to run entire stack (`local` / `docker` / `stop` / `status` / `logs`)
+- `./run.sh local` — infra in Docker + Java services + frontend natively
+- `./run.sh docker` — everything containerized
+- Spring Boot DevTools not present (not in dependencies)
+- No IDE-specific configuration committed (`.vscode` exists but minimal)
 
-- **GitHub Actions** (.github directory)
-- **Docker-based deployments**
+---
 
-## Key Technologies Summary
-
-| Layer | Technology | Purpose |
-|-------|------------|---------|
-| Backend | Java 21 | Primary development language |
-| Backend | Spring Boot | Framework for microservices |
-| Backend | MongoDB | Primary database for product/inventory |
-| Backend | PostgreSQL | User/auth data storage |
-| Backend | Apache Kafka | Event streaming |
-| Backend | Resilience4j | Fault tolerance |
-| Backend | Keycloak | Identity and Access Management |
-| Frontend | Angular 20 | User interface |
-| Frontend | TypeScript | Frontend logic |
-| Frontend | TailwindCSS | Styling |
-| DevOps | Docker | Containerization |
-| DevOps | Maven | Build and dependency management |
-
-## Technology Decisions
-
-1. **Microservices Architecture**: Enables independent scaling and development
-2. **Java Spring Boot**: Industry-standard for enterprise applications
-3. **Angular**: Modern, responsive UI development
-4. **Event-Driven**: Kafka enables loose coupling and scalability
-5. **Cloud-Native**: Docker and Kubernetes readiness
-
-## Future Considerations
-
-- **Serverless Functions**: Consider for burst workloads
-- **GraphQL**: Explore for complex queries
-- **WebSockets**: Real-time features
-- **Microprofile**: Further microservices standardization
-
-
-## *...tech analysis: 2026-08-28*
+*Codebase stack analysis: 2026-08-28*

@@ -1,250 +1,138 @@
-# Architecture Analysis
+---
+last_mapped_commit: HEAD
+---
 
-## **Analysis Date:** 2026-08-28
+# Architecture
+
+**Analysis Date:** 2026-08-28
 
 ## Overview
-This document analyzes the architectural patterns, layers, data flow, and abstractions in the MSB E-Commerce microservices platform.
 
-## System Architecture
+MSB E-Commerce is a **microservices architecture** with 7 backend services, an Angular frontend, and supporting infrastructure. Services communicate synchronously via REST through an API Gateway, and asynchronously via Apache Kafka for event-driven workflows.
 
-### Pattern
-The system follows a **Microservices Architecture** with the following characteristics:
+## Architectural Pattern
 
-- **Service Decomposition**: 7 independent services (product, order, inventory, api-gateway, notification, payment, auth)
-- **API Gateway**: Centralized entry point (api-gateway service)
-- **Event-Driven Communication**: Apache Kafka for asynchronous messaging
-- **Service Discovery**: Spring Cloud Discovery Client
-- **Circuit Breaker**: Resilience4j pattern for fault tolerance
+### Microservices with API Gateway
+- **Entry point:** API Gateway (port 9000) — all external traffic enters here
+- **Service discovery:** Static URLs (no Eureka/Consul yet) — configured via environment variables
+- **Communication:** REST (synchronous) + Kafka (asynchronous)
+- **Data isolation:** Each service owns its own database (Database per Service pattern)
 
-## Layers
+### Per-Service Layered Architecture
+Each backend service follows a consistent 4-layer pattern:
 
-### Presentation Layer
+```
+Controller (REST endpoint)
+    ↓
+Service (business logic + @Transactional)
+    ↓
+Repository (data access — JPA or MongoDB)
+    ↓
+Model/Entity (domain objects)
+```
 
-- **API Gateway**: `api-gateway/src/main/java/com/msb/ecom/api_gateway/routes/Routes.java`
-  - Centralized routing and request handling
-  - Authentication and authorization enforcement
-  - Rate limiting and circuit breaking
+Plus DTOs for request/response serialization.
 
-- **Frontend Services**: `frontend/` directory
-  - Angular 20 application
-  - RESTful API consumption
-  - Single-page application (SPA)
+### Event-Driven Communication
+- **Order → Notification:** Order placement triggers a Kafka event that the notification service consumes to send emails
+- **Pattern:** Publisher-subscriber with JSON serialization
+- **Topic:** `order-placed`
 
-### Business Logic Layer
+## Service Map
 
-- **Service Layer**: Each microservice implements business logic
-  - `product-service`: Product catalog management
-  - `order-service`: Order processing and management
-  - `inventory-service`: Stock management
-  - `payment-service`: Payment processing
-  - `auth-service`: Authentication and authorization
-  - `notification-service`: Notification delivery
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        Frontend (Angular)                       │
+│                         port 4200                               │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │ HTTP
+┌──────────────────────────▼──────────────────────────────────────┐
+│                     API Gateway (Spring MVC)                     │
+│                         port 9000                               │
+│  ┌─────────────┐  ┌──────────────┐  ┌────────────────────┐     │
+│  │ JWT Auth     │  │ Route Rules  │  │ Circuit Breakers   │     │
+│  │ (HS256)      │  │ (5 routes)   │  │ (Resilience4j)     │     │
+│  └─────────────┘  └──────────────┘  └────────────────────┘     │
+└───┬─────────┬─────────┬──────────┬─────────┬────────────────────┘
+    │         │         │          │         │
+    ▼         ▼         ▼          ▼         ▼
+┌───────┐ ┌───────┐ ┌───────┐ ┌───────┐ ┌───────┐
+│ Product│ │ Order │ │Invent.│ │Payment│ │ Auth  │
+│ 8080  │ │ 8081  │ │ 8082  │ │ 8084  │ │ 8085  │
+└───┬───┘ └───┬───┘ └───┬───┘ └───┬───┘ └───┬───┘
+    │         │         │         │         │
+    ▼         ▼         ▼         ▼         ▼
+ MongoDB    MySQL     MySQL     MySQL   PostgreSQL
+```
 
-### Data Access Layer
-
-- **Repositories**: Spring Data repositories
-  - `ProductRepository`: `product-service/src/main/java/com/msb/ecom/product_service/repository/ProductRepository.java`
-  - `OrderRepository`: `order-service/src/main/java/com/msb/ecom/order_service/repository/OrderRepository.java`
-  - `UserRepository`: `auth-service/src/main/java/com/msb/ecom/auth_service/repository/UserRepository.java`
-
-- **Database Configurations**:
-  - MongoDB for product and inventory services
-  - PostgreSQL for order and auth services
-
-### Infrastructure Layer
-
-- **Message Broker**: Apache Kafka topics
-  - `order-events`: Order creation and status updates
-  - `inventory-updates`: Stock changes
-  - `payment-events`: Payment processing
-
-- **Configuration**: Spring Cloud Config
-  - Externalized configuration management
-  - Environment-specific settings
+**Notification Service (8083)** runs independently — consumes Kafka events, no direct API Gateway routing.
 
 ## Data Flow
 
-### Order Processing Flow
+### Synchronous Request Flow (e.g., Create Product)
+1. Client → API Gateway (`POST /api/product`)
+2. Gateway validates JWT (if not on free path)
+3. Gateway forwards to Product Service (`http://localhost:8080/api/product`)
+4. Product Service processes and returns response
+5. Gateway returns response to client
 
-1. **User places order** via API Gateway
-   - Request: `/order/**` endpoints
-   - Validation: OrderService validates and persists
+### Asynchronous Event Flow (e.g., Place Order)
+1. Client → API Gateway → Order Service
+2. Order Service saves order to MySQL
+3. (Kafka producer should emit `order-placed` event — **NOT YET IMPLEMENTED**)
+4. Notification Service consumes event from `order-placed` topic
+5. Notification Service sends confirmation email via Mailpit
 
-2. **Inventory update** triggered asynchronously
-   - Kafka event: `order-events` topic
-   - Consumer: InventoryService updates stock
-
-3. **Payment processing**
-   - Kafka event: `order-events` topic
-   - Consumer: PaymentService processes payment
-
-4. **Notifications sent**
-   - Kafka event: `payment-events` topic
-   - Consumer: NotificationService sends notifications
-
-## Abstractions
-
-### Service Interfaces
-
-- **ProductService**: `product-service/src/main/java/com/msb/ecom/product_service/service/ProductService.java`
-  - `ProductRequest` → `ProductResponse`
-  - CRUD operations for products
-
-- **OrderService**: `order-service/src/main/java/com/msb/ecom/order_service/service/OrderService.java`
-  - `OrderRequest` → `OrderResponse`
-  - Order lifecycle management
-
-- **AuthService**: `auth-service/src/main/java/com/msb/ecom/auth_service/service/AuthService.java`
-  - `LoginRequest`, `SignupRequest`, `UserResponse`
-  - Authentication and user management
-
-### Data Transfer Objects
-
-- **DTOs**: Used for API communication
-  - Request/Response patterns
-  - Validation annotations
-  - JSON serialization
+### Circuit Breaker Flow
+1. If a downstream service fails, Resilience4j tracks failures
+2. After 5 failures out of 10 calls → circuit opens (50% threshold)
+3. Open circuit returns fallback response immediately for 5 seconds
+4. Half-open state allows 3 test calls → if succeed, circuit closes
 
 ## Entry Points
 
+| Entry Point | Type | Location |
+|-------------|------|----------|
+| API Gateway | HTTP REST | `api-gateway/src/main/java/com/msb/ecom/api_gateway/ApiGatewayApplication.java` |
+| Auth Service | HTTP REST | `auth-service/src/main/java/com/msb/ecom/auth_service/AuthServiceApplication.java` |
+| Product Service | HTTP REST | `product-service/src/main/java/com/msb/ecom/product_service/ProductServiceApplication.java` |
+| Order Service | HTTP REST | `order-service/src/main/java/com/msb/ecom/order_service/OrderServiceApplication.java` |
+| Inventory Service | HTTP REST | `inventory-service/src/main/java/com/msb/ecom/inventory_service/InventoryServiceApplication.java` |
+| Payment Service | HTTP REST | `payment-service/src/main/java/com/msb/ecom/payment_service/PaymentServiceApplication.java` |
+| Notification Service | Kafka Consumer | `notification-service/src/main/java/com/msb/ecom/notification_service/NotificationServiceApplication.java` |
+| Frontend | Angular SSR | `frontend/src/app/app.ts` + `frontend/src/server.ts` |
+
+## Key Abstractions
+
 ### API Gateway Routes
+- `Routes.java` — declarative `RouterFunction<ServerResponse>` beans using Spring Cloud Gateway MVC
+- Each service gets its own route bean with a circuit breaker filter
+- Fallback route returns HTTP 503 with generic message
 
-- `api-gateway/src/main/java/com/msb/ecom/api_gateway/routes/Routes.java`
-  - `/product/**` → ProductService
-  - `/order/**` → OrderService
-  - `/inventory/**` → InventoryService
-  - `/payment/**` → PaymentService
-  - `/auth/**` → AuthService
-  - `/notification/**` → NotificationService
+### JWT Authentication
+- **Auth Service:** Issues tokens via `JwtService.generateToken()` using JJWT
+- **API Gateway:** Validates tokens via `NimbusJwtDecoder` with shared HMAC secret
+- **Free paths:** Auth endpoints, Swagger, Actuator health, fallback route
 
-### External Entry Points
+### Resilience4j Configuration
+- **Circuit Breaker:** Count-based sliding window (10 calls), 50% failure threshold, 5s wait
+- **TimeLimiter:** 3-second timeout per request
+- **Retry:** 3 attempts with 2s wait between retries
+- All configured centrally in `api-gateway/src/main/resources/application.properties`
 
-- **OAuth2/OpenID Connect**: `/oauth2/authorize`, `/login/oauth2/code/*`
-- **Webhooks**: External payment gateway callbacks
-- **Event Subscriptions**: Kafka topic listeners
+## Service Dependencies
 
-## Architecture Patterns
+| Service | Depends On | Notes |
+|---------|-----------|-------|
+| API Gateway | All services | Routes traffic, validates JWT |
+| Order Service | MySQL | Standalone |
+| Inventory Service | MySQL | Standalone |
+| Payment Service | MySQL | Standalone |
+| Product Service | MongoDB | Standalone |
+| Auth Service | PostgreSQL | Standalone |
+| Notification Service | Kafka, Mailpit | Async consumer only |
+| Frontend | API Gateway | All API calls through gateway |
 
-### Repository Pattern
+---
 
-- **Purpose**: Abstract data access
-- **Implementation**: Spring Data JPA/Mongo repositories
-- **Example**: `UserRepository extends JpaRepository<User, Long>`
-
-### Service Layer Pattern
-
-- **Purpose**: Business logic encapsulation
-- **Implementation**: Service interfaces with implementations
-- **Example**: `AuthService` interface with JWT-based auth
-
-### Facade Pattern
-
-- **Purpose**: Simplify external interface
-- **Implementation**: API Gateway provides unified API
-- **Example**: Single entry point for all services
-
-### Observer Pattern
-
-- **Purpose**: Event-driven communication
-- **Implementation**: Kafka event consumers
-- **Example**: InventoryService observes Order events
-
-## Technology Stack Components
-
-### Spring Boot Configuration
-
-- **Parent POM**: `msb-ecom/pom.xml` (version 3.4.2)
-- **Properties**: Java 21, Spring Cloud 2024.0.0
-- **Plugins**: Maven compiler, Spring Boot plugin
-
-### Maven Multi-Module Structure
-
-- **Parent**: `msb-ecom/pom.xml`
-- **Modules**: 7 services + frontend
-- **Dependency Management**: Spring Cloud dependencies
-
-### Security Configuration
-
-- **OAuth2 Resource Server**: `api-gateway/src/main/java/com/msb/ecom/api_gateway/config/SecurityConfig.java`
-- **Authentication Filter**: `SessionAuthenticationFilter.java`
-- **Authorization**: Role-based access control
-
-## Architecture Quality Attributes
-
-### Scalability
-- **Horizontal Scaling**: Each service can scale independently
-- **Stateless Services**: Recommended for easy scaling
-- **Load Balancing**: API Gateway distributes traffic
-
-### Reliability
-- **Circuit Breaker**: Resilience4j prevents cascading failures
-- **Retry Mechanisms**: Exponential backoff for transient failures
-- **Timeouts**: Configured timeouts for all integrations
-
-### Maintainability
-- **Separation of Concerns**: Clear layer boundaries
-- **Single Responsibility**: Each service has one purpose
-- **Testability**: Isolated services enable unit testing
-
-### Observability
-- **Distributed Tracing**: Spring Cloud Sleuth integration
-- **Metrics**: Prometheus actuator endpoints
-- **Logging**: Structured logging with Logstash
-
-## Architecture Decision Log
-
-### Decision 1: Microservices vs Monolith
-**Choice**: Microservices
-**Reasoning**: Independent scaling, technology diversity, fault isolation
-
-### Decision 2: Kafka vs MessageQueue
-**Choice**: Apache Kafka
-**Reasoning**: High throughput, durability, stream processing capabilities
-
-### Decision 3: JWT vs Session Tokens
-**Choice**: JWT
-**Reasoning**: Stateless authentication, distributed system compatibility
-
-### Decision 4: MongoDB vs Relational DB
-**Choice**: MongoDB for product/inventory, PostgreSQL for auth/orders
-**Reasoning**: Flexible schema for products, ACID compliance for transactions
-
-## Architecture Best Practices
-
-1. **API Design**: RESTful APIs with OpenAPI/Swagger
-2. **Error Handling**: Centralized exception handling
-3. **Configuration**: Externalized configuration management
-4. **Security**: Zero-trust network architecture
-5. **Testing**: Contract testing for integrations
-6. **Monitoring**: Health checks and metrics collection
-
-## Future Architecture Considerations
-
-1. **Service Mesh**: Istio or Linkerd for advanced traffic management
-2. **Serverless**: AWS Lambda for event processing
-3. **GraphQL**: For complex queries and reduced payload
-4. **Event Sourcing**: For audit trails and replay capabilities
-5. **CQRS**: Separate read and write operations
-
-## Architecture Dependencies
-
-### Spring Cloud Dependencies
-```xml
-<dependency>
-    <groupId>org.springframework.cloud</groupId>
-    <artifactId>spring-cloud-dependencies</artifactId>
-    <version>2024.0.0</version>
-    <type>pom</type>
-    <scope>import</scope>
-</dependency>
-```
-
-### Key Architecture Components
-
-| Component | Responsibility | Location |
-|-----------|----------------|----------|
-| API Gateway | Routing and security | `api-gateway/` |
-| Auth Service | Authentication/Authorization | `auth-service/` |
-| Message Broker | Event streaming | Kafka brokers |
-| Database | Data persistence | Per-service databases |
-| Configuration | External settings | Spring Cloud Config |
+*Codebase architecture analysis: 2026-08-28*

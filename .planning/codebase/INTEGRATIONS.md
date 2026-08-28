@@ -1,283 +1,125 @@
+---
+last_mapped_commit: HEAD
+---
+
 # External Integrations
 
-## **Analysis Date:** 2026-08-28
+**Analysis Date:** 2026-08-28
+
+## Database Connections
+
+### MongoDB — Product Service
+- **Connection URI:** `mongodb://root:password@localhost:27017/product-service?authSource=admin`
+- **Config:** `product-service/src/main/resources/application.properties`
+- **Spring Data:** `spring-boot-starter-data-mongodb`
+- **Document:** `Product` entity in `product-service/src/main/java/com/msb/ecom/product_service/model/Product.java`
+- **Repository:** `ProductRepository` (Spring Data MongoDB interface)
+
+### MySQL — Order, Inventory, Payment Services
+- **Host:** `localhost:3306` (configurable via `MYSQL_PORT`)
+- **Credentials:** root / `${MYSQL_ROOT_PASSWORD:-mysql}`
+- **Databases:** `order_service`, `inventory_service`, `payment_service` (created at runtime by `run.sh`)
+- **Config:** Each service's `application.properties`
+- **ORM:** Spring Data JPA + Hibernate
+- **Migrations:** Flyway (`classpath:db/migration`)
+- **DDL:** `hibernate.ddl-auto=none` (Flyway manages schema)
+
+#### Flyway Migrations
+| Service | File | Tables |
+|---------|------|--------|
+| Order | `order-service/src/main/resources/db/migration/V1__init.sql` | `t_orders` |
+| Inventory | `inventory-service/src/main/resources/db/migration/V1__init.sql` | `t_inventory` (with seed data) |
+| Payment | `payment-service/src/main/resources/db/migration/V1__init.sql` | `t_payments` |
+
+### PostgreSQL — Auth Service
+- **Host:** `localhost:5432` (separate container `postgres-auth`)
+- **Database:** `auth_service`
+- **Credentials:** `${AUTH_DB_USER:-auth}` / `${AUTH_DB_PASSWORD:-password}`
+- **Config:** `auth-service/src/main/resources/application.properties`
+- **ORM:** Spring Data JPA + Hibernate
+- **Migrations:** Flyway (`V1__init_users.sql` → `t_users`)
+
+### PostgreSQL — Keycloak
+- **Host:** `postgres-keycloak:5432` (internal Docker network)
+- **Database:** `keycloak`
+- **Purpose:** Keycloak's own persistence (user sessions, realms, etc.)
+
+## Messaging — Apache Kafka
+
+### Topic: `order-placed`
+- **Producer:** Not yet implemented in any service (see CONCERNS.md)
+- **Consumer:** Notification Service
+  - **Config:** `notification-service/src/main/resources/application.properties`
+  - **Group ID:** `notificationService`
+  - **Deserializer:** `JsonDeserializer` with type mapping: `orderPlacedEvent → OrderPlacedEvent`
+  - **Listener:** `NotificationService.listen()` in `notification-service/src/main/java/com/msb/ecom/notification_service/service/NotificationService.java`
+  - **Event Class:** `OrderPlacedEvent` — fields: `orderNumber`, `skuCode`, `quantity`, `userEmail`
+
+### Kafka Infrastructure
+- **Broker:** `localhost:9092` (external) / `broker:29092` (internal)
+- **Zookeeper:** `localhost:2181`
+- **Schema Registry:** `localhost:8081` (configured but not actively used)
+- **Kafka UI:** `localhost:8080` (topic inspection)
+
+## Identity & Authentication
+
+### Keycloak (Configured, Not Fully Integrated)
+- **Admin UI:** `http://localhost:8181` (admin/admin)
+- **Realm:** Default (master) — no custom realm configured yet
+- **Config:** `docker-compose.yml` service definition
+- **API Gateway integration:** Keycloak's issuer-uri and jwk-set-uri are empty in gateway config
+
+### Self-Managed JWT Auth
+- **Auth Service** (`auth-service`) issues its own JWTs using JJWT library
+- **Secret:** Symmetric HS256 key shared between auth-service and api-gateway
+- **Config locations:**
+  - `auth-service/src/main/resources/application.properties` — `jwt.secret`, `jwt.expiration`
+  - `api-gateway/src/main/resources/application.properties` — `spring.security.oauth2.resourceserver.jwt.secret`
+- **Token flow:** Auth service generates → Client stores → API Gateway validates
+- **Free paths:** `/auth/**`, `/swagger-ui/**`, `/actuator/health/**`, `/fallbackRoute`
+
+### Session Management
+- Auth service originally used `HttpSession` (commented out code suggests transition)
+- Current implementation: pure JWT-based, no server-side sessions
+
+## Email — Mailpit
+
+- **SMTP:** `localhost:1025`
+- **Web UI:** `http://localhost:8025`
+- **Consumer:** Notification Service sends order confirmation emails
+- **Config:** `notification-service/src/main/resources/application.properties`
+- **Mail format:** HTML with order details (MIME message)
+- **From address:** `orders@msb-ecom.com`
+
+## API Gateway Routing
+
+All traffic flows through API Gateway (`localhost:9000`) which proxies to individual services:
+
+| Route Pattern | Target Service | Circuit Breaker |
+|---------------|----------------|-----------------|
+| `/api/product/**` | `http://localhost:8080` | `productServiceCircuitBreaker` |
+| `/api/order/**` | `http://localhost:8081` | `orderServiceCircuitBreaker` |
+| `/api/inventory/**` | `http://localhost:8082` | `inventoryServiceCircuitBreaker` |
+| `/api/payment/**` | `http://localhost:8084` | `paymentServiceCircuitBreaker` |
+| `/auth/**` | `http://localhost:8085` | `authServiceCircuitBreaker` |
+| `/fallbackRoute` | Gateway itself (503 response) | — |
+
+**Config:** `api-gateway/src/main/java/com/msb/ecom/api_gateway/routes/Routes.java`
 
-## Overview
-This document analyzes external integrations, APIs, databases, authentication providers, and webhook systems used by the MSB E-Commerce microservices platform.
+## Frontend → Backend
 
-## Databases
+- Angular app communicates with backend services exclusively through the API Gateway
+- **Auth interceptor:** `frontend/src/app/core/interceptors/auth.interceptor.ts` — attaches JWT to requests
+- **Auth guard:** `frontend/src/app/core/guards/auth.guard.ts` — protects routes
+- **Services:** `frontend/src/app/core/services/` — HTTP clients for each domain (product, order, payment, inventory, auth)
 
-### Product Service
+## Observability (ELK Stack)
 
-- **Database:** MongoDB
-  - Location: `product-service/src/main/resources/application.properties`
-  - Collections: `products`, `categories`, `inventory`
-  - Reason: Flexible schema for product catalog
-  - Connection: Embedded in Spring Boot configuration
+- **Elasticsearch:** `localhost:9200/9300` — single-node, security disabled
+- **Logstash:** `localhost:50000` — pipeline config at `logstash/logstash.conf` (file not found in repo)
+- **Kibana:** `localhost:5601` — dashboard
+- **Status:** Infrastructure defined but no application log shipping configured yet (Logstash pipeline file missing)
 
-### Order Service
+---
 
-- **Database:** PostgreSQL
-  - Location: `order-service/src/main/resources/application.properties`
-  - Tables: `orders`, `order_items`, `customers`
-  - Reason: ACID compliance for financial transactions
-  - Connection: Managed via Spring Data JPA
-
-### Auth Service
-
-- **Database:** PostgreSQL
-  - Location: `auth-service/src/main/resources/application.properties`
-  - Tables: `users`, `roles`, `permissions`, `sessions`
-  - Reason: User management and authentication
-  - Connection: JPA with Spring Security integration
-
-### Inventory Service
-
-- **Database:** MongoDB
-  - Location: `inventory-service/src/main/resources/application.properties`
-  - Collections: `inventory_items`, `warehouse_locations`
-  - Reason: Real-time inventory tracking with flexible queries
-
-## Authentication & Authorization
-
-### OAuth2 / OpenID Connect
-
-- **Provider:** Keycloak
-  - Location: Configured in `api-gateway/src/main/resources/application.properties`
-  - Integration: Spring Security OAuth2 Resource Server
-  - Endpoints: `/auth/realms/msb-ecom/protocol/openid-connect/*`
-  - Scopes: `openid`, `profile`, `email`, `roles`
-
-### JWT Tokens
-
-- **Implementation:** Custom JWT service in `auth-service`
-  - Location: `auth-service/src/main/java/com/msb/ecom/auth_service/service/JwtService.java`
-  - Algorithm: HS256 with secret key
-  - Expiration: 24 hours for access tokens, 7 days for refresh tokens
-  - Validation: Token filtering in API Gateway
-
-## External APIs
-
-### Payment Processing
-
-- **Provider:** Custom payment service
-  - Location: `payment-service/src/main/java/com/msb/ecom/payment_service/service/PaymentService.java`
-  - Integration: REST API calls to external payment gateways
-  - Methods: `processPayment()`, `refundPayment()`
-  - Configuration: External API endpoints in application properties
-
-### Notification Service
-
-- **Provider:** Email/SMS providers
-  - Location: `notification-service/src/main/java/com/msb/ecom/notification_service/service/NotificationService.java`
-  - Channels: Email, SMS, Push notifications
-  - Integration: SMTP for email, third-party SMS APIs for SMS
-  - Templates: Email templates in `/templates/` directories
-
-### Inventory Management
-
-- **Provider:** External inventory APIs
-  - Location: `inventory-service/src/main/java/com/msb/ecom/inventory_service/service/InventoryService.java`
-  - Integration: HTTP client for external warehouse systems
-  - Methods: `syncInventory()`, `checkStockAvailability()`
-
-## Event-Driven Integrations
-
-### Apache Kafka Topics
-
-- **Order Processing Events**
-  - Topic: `order-events`
-  - Producer: `order-service`
-  - Consumers: `inventory-service`, `payment-service`, `notification-service`
-  - Event Types: `OrderCreated`, `OrderCompleted`, `OrderCancelled`
-
-- **Inventory Updates**
-  - Topic: `inventory-updates`
-  - Producer: `inventory-service`
-  - Consumers: `order-service`
-  - Event Types: `StockReserved`, `StockReleased`
-
-- **Payment Events**
-  - Topic: `payment-events`
-  - Producer: `payment-service`
-  - Consumers: `notification-service`
-  - Event Types: `PaymentProcessed`, `PaymentFailed`
-
-### Event Schema
-
-```java
-// OrderCreated event
-public class OrderCreatedEvent {
-    private String orderId;
-    private String customerId;
-    private BigDecimal amount;
-    private List<OrderItem> items;
-    private Timestamp timestamp;
-}
-```
-
-## API Gateway Routes
-
-### Authentication Routes
-
-- `/auth/login` - Authenticate users
-- `/auth/logout` - Logout users
-- `/auth/register` - Register new users
-- `/auth/validate` - Validate tokens
-
-### Service Routes
-
-- `/product/**` - Product service gateway
-- `/order/**` - Order service gateway
-- `/inventory/**` - Inventory service gateway
-- `/payment/**` - Payment service gateway
-- `/notification/**` - Notification service gateway
-
-## Webhook Integrations
-
-### Order Webhooks
-
-- **Target:** External analytics services
-  - Location: `order-service/src/main/resources/application.properties`
-  - Webhook URL: Configurable via properties
-  - Events: Order created, completed, cancelled
-
-### Payment Webhooks
-
-- **Target:** Payment gateway callbacks
-  - Location: `payment-service/src/main/resources/application.properties`
-  - Webhook URL: Payment gateway endpoint
-  - Events: Payment success, failure, refund
-
-## Third-Party Service Integrations
-
-### Email Service
-
-- **Provider:** JavaMail API
-  - Location: `notification-service/src/main/java/com/msb/ecom/notification_service/service/EmailService.java`
-  - Integration: SMTP protocol
-  - Templates: Thymeleaf email templates
-
-### SMS Service
-
-- **Provider:** Third-party SMS APIs
-  - Location: `notification-service/src/main/java/com/msb/ecom/notification_service/service/SmsService.java`
-  - Integration: REST API calls
-  - Configuration: API keys and endpoints in properties
-
-### Currency Exchange
-
-- **Provider:** External APIs
-  - Location: `order-service/src/main/java/com/msb/ecom/order_service/service/CurrencyService.java`
-  - Integration: REST API for real-time rates
-  - Caching: Redis for rate limiting
-
-## Security Integrations
-
-### Keycloak Configuration
-
-- **Realm:** `msb-ecom`
-- **Client:** `msb-ecom-app`
-- **Scopes:** `openid`, `profile`, `email`, `roles`, `offline_access`
-- **Mappers:** Standard profile, email, roles
-
-### Token Validation
-
-- **Interceptor:** `api-gateway/src/main/java/com/msb/ecom/api_gateway/config/SecurityConfig.java`
-- **Validation:** JWT token validation in request headers
-- **Authorities:** Roles extracted from JWT claims
-
-## Integration Testing
-
-### Testcontainers
-
-- **Databases:** PostgreSQL, MongoDB
-  - Location: Service test configurations
-  - Purpose: Isolated database testing
-  - Integration: Spring Boot Testcontainers
-
-### Mock APIs
-
-- **External Services:** MockServer, WireMock
-  - Location: Service test resources
-  - Purpose: Simulate external dependencies
-  - Integration: Spring Cloud Contract
-
-## Integration Monitoring
-
-### Metrics
-
-- **External API calls:** Prometheus metrics
-  - Location: Service actuator endpoints
-  - Monitoring: API response times, error rates
-
-### Logging
-
-- **Integration logs:** Logstash configuration
-  - Location: `src/main/resources/logback.xml`
-  - Format: Structured logging for audit trails
-
-## Integration Security
-
-### API Keys
-
-- **Storage:** Environment variables
-  - Location: `.env` files
-  - Protection: Encryption at rest
-
-### Secure Communication
-
-- **TLS/SSL:** HTTPS for all external API calls
-- **Authentication:** Bearer tokens for authenticated services
-- **Authorization:** Scope-based access control
-
-## Integration Best Practices
-
-1. **Circuit Breaker:** Resilience4j for external service failures
-2. **Timeouts:** Configurable timeouts for all external calls
-3. **Retry Logic:** Exponential backoff for transient failures
-4. **Rate Limiting:** Prevent abuse of external services
-5. **Monitoring:** Health checks and metrics collection
-6. **Security:** TLS, authentication, and authorization
-
-## Integration Dependencies
-
-### Maven Dependencies
-
-```xml
-<!-- External API clients -->
-<dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-web</artifactId>
-</dependency>
-
-<!-- Kafka integration -->
-<dependency>
-    <groupId>org.springframework.kafka</groupId>
-    <artifactId>spring-kafka</artifactId>
-</dependency>
-
-<!-- JWT authentication -->
-<dependency>
-    <groupId>io.jsonwebtoken</groupId>
-    <artifactId>jjwt-api</artifactId>
-    <version>0.11.5</version>
-</dependency>
-
-<!-- Email service -->
-<dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-mail</artifactId>
-</dependency>
-```
-
-## Integration Future Roadmap
-
-1. **API Gateway**: Add service mesh (Envoy/Linkerd)
-2. **Observability**: Distributed tracing with Jaeger/Zipkin
-3. **Security**: Zero-trust network architecture
-4. **Data Integration**: Elasticsearch for search capabilities
-5. **Event Streaming**: Advanced Kafka patterns (kinesis, pulsar)
-
-
-## *...tech analysis: 2026-08-28*
+*Codebase integrations analysis: 2026-08-28*
