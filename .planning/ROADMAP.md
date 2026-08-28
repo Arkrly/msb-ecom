@@ -75,4 +75,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 2. Containerization & Image Loading | 0/1 | Not started | - |
 | 3. Config, Secrets & Stateful Infrastructure | 0/1 | Not started | - |
 | 4. Backend Services & Gateway Routing | 0/1 | Not started | - |
-| 5. Automated Orchestration, Verification & Teach-Back | 0/1 | Not started | - |
+| 5. Automated Orchestration, Verification & Teach-Back | 0/1 | Planned | - |
