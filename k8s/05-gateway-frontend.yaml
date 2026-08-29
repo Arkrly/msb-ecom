@@ -1,0 +1,166 @@
+# ─────────────────────────────────────────────────────────────
+#  API Gateway & Angular Frontend (Host-Exposed via NodePort)
+# ─────────────────────────────────────────────────────────────
+
+# ── API Gateway ──────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+  namespace: msb-ecom
+  labels:
+    app: api-gateway
+    app.kubernetes.io/tier: gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+        app.kubernetes.io/tier: gateway
+    spec:
+      containers:
+        - name: api-gateway
+          image: msb-ecom/api-gateway:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 9000
+          env:
+            - name: PRODUCT_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: PRODUCT_SERVICE_URL
+            - name: ORDER_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: ORDER_SERVICE_URL
+            - name: INVENTORY_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: INVENTORY_SERVICE_URL
+            - name: PAYMENT_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: PAYMENT_SERVICE_URL
+            - name: AUTH_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: AUTH_SERVICE_URL
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: JWT_SECRET
+            - name: JAVA_OPTS
+              value: "-Xms128m -Xmx256m"
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "384Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 9000
+            initialDelaySeconds: 40
+            periodSeconds: 15
+            timeoutSeconds: 3
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 9000
+            initialDelaySeconds: 25
+            periodSeconds: 10
+            timeoutSeconds: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway
+  namespace: msb-ecom
+spec:
+  type: NodePort
+  selector:
+    app: api-gateway
+  ports:
+    - port: 9000
+      targetPort: 9000
+      nodePort: 30000
+
+---
+# ── Angular Frontend ─────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: msb-ecom
+  labels:
+    app: frontend
+    app.kubernetes.io/tier: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+        app.kubernetes.io/tier: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: msb-ecom/frontend:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 4200
+          resources:
+            requests:
+              memory: "32Mi"
+              cpu: "20m"
+            limits:
+              memory: "64Mi"
+              cpu: "100m"
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 4200
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 3
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 4200
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: msb-ecom
+spec:
+  type: NodePort
+  selector:
+    app: frontend
+  ports:
+    - name: http-80
+      port: 80
+      targetPort: 4200
+      nodePort: 30080
+    - name: http-4200
+      port: 4200
+      targetPort: 4200
+      nodePort: 30420

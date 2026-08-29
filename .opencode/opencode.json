@@ -1,0 +1,24 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "permission": {
+    "read": {
+      "/home/arkrly/Projects/msb-ecom/.opencode/gsd-core/*": "allow"
+    },
+    "external_directory": {
+      "/home/arkrly/Projects/msb-ecom/.opencode/gsd-core/*": "allow"
+    }
+  },
+  "mcp": {
+    "gsd": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "-p",
+        "@opengsd/gsd-core",
+        "gsd-mcp-server"
+      ],
+      "enabled": true
+    }
+  }
+}
