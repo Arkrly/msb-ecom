@@ -44,6 +44,7 @@ MSB E-Commerce is designed to demonstrate a real-world microservices architectur
 ### Infrastructure
 
 - **Containerization**: Docker & Docker Compose
+- **Orchestration**: Kubernetes (Kind, Helm charts, Kustomize)
 - **Service Discovery**: (Planned/Static)
 - **API Gateway**: Spring Cloud Gateway MVC
 
@@ -70,6 +71,7 @@ The system consists of the following microservices:
 - Node.js 20+ & npm
 - Docker & Docker Compose
 - Maven
+- **Kubernetes** (Kind, kubectl, Helm) - for K8s deployment
 
 ### Installation
 
@@ -104,12 +106,29 @@ The system consists of the following microservices:
    ```
 
 4. **Run Frontend**
-   ```bash
-   cd frontend
-   npm install
-   npm start
-   ```
-   Access the app at `http://localhost:4200`.
+    ```bash
+    cd frontend
+    npm install
+    npm start
+    ```
+    Access the app at `http://localhost:4200`.
+
+### Kubernetes Deployment
+
+For production-like local deployment, use the Kubernetes setup:
+
+```bash
+cd k8s
+./scripts/deploy-local.sh
+```
+
+This will:
+- Create a Kind cluster
+- Deploy all infrastructure (PostgreSQL, MySQL, MongoDB, Kafka, Keycloak)
+- Build and load Docker images
+- Deploy all microservices via Helm/Kustomize
+
+See [k8s/README.md](k8s/README.md) for detailed Kubernetes documentation.
 
 ## 🤝 Contributing
 
